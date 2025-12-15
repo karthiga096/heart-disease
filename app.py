@@ -3,87 +3,48 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score
 
-st.set_page_config(page_title="Heart Disease Prediction", layout="centered")
-
+# Title
 st.title("❤️ Heart Disease Prediction App")
 
-# -----------------------------
-# Load Dataset
-# -----------------------------
-@st.cache_data
-def load_data():
-    df = pd.read_csv("heart.csv")  # Upload this file to Streamlit Cloud
-    return df
+# Upload CSV file
+uploaded_file = st.file_uploader("Upload your heart.csv file", type=["csv"])
+if uploaded_file is not None:
+    df = pd.read_csv(uploaded_file)
+    st.success("File uploaded successfully!")
+    st.dataframe(df.head())
 
-df = load_data()
+    # Split data
+    X = df.drop("target", axis=1)  # Replace 'target' with your label column name
+    y = df["target"]
 
-st.subheader("Dataset Preview")
-st.dataframe(df.head())
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# -----------------------------
-# Preprocessing
-# -----------------------------
-X = df.drop("Heart Disease", axis=1)
-y = df["Heart Disease"]
+    # Scale features
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
 
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=42
-)
+    # Train model
+    model = LogisticRegression()
+    model.fit(X_train, y_train)
 
-scaler = StandardScaler()
-X_train = scaler.fit_transform(X_train)
-X_test = scaler.transform(X_test)
+    # Accuracy
+    st.write(f"Model Accuracy: {model.score(X_test, y_test) * 100:.2f}%")
 
-# -----------------------------
-# Model Training
-# -----------------------------
-model = LogisticRegression()
-model.fit(X_train, y_train)
+    # User input for prediction
+    st.subheader("Make a Prediction")
+    user_input = {}
+    for column in X.columns:
+        user_input[column] = st.number_input(f"Enter {column}", value=float(df[column].mean()))
+    
+    input_df = pd.DataFrame([user_input])
+    input_scaled = scaler.transform(input_df)
+    prediction = model.predict(input_scaled)
 
-y_pred = model.predict(X_test)
-accuracy = accuracy_score(y_test, y_pred)
-
-st.success(f"✅ Model Accuracy: {accuracy:.2f}")
-
-# -----------------------------
-# User Input
-# -----------------------------
-st.subheader("Enter Patient Details")
-
-age = st.number_input("Age", 1, 120, 50)
-sex = st.selectbox("Sex", [0, 1], format_func=lambda x: "Female" if x == 0 else "Male")
-cp = st.selectbox("Chest Pain Type (0–3)", [0, 1, 2, 3])
-trestbps = st.number_input("Resting Blood Pressure", 80, 200, 120)
-chol = st.number_input("Cholesterol", 100, 600, 200)
-fbs = st.selectbox("Fasting Blood Sugar > 120", [0, 1])
-restecg = st.selectbox("Resting ECG Result (0–2)", [0, 1, 2])
-thalach = st.number_input("Maximum Heart Rate", 60, 220, 150)
-exang = st.selectbox("Exercise Induced Angina", [0, 1])
-oldpeak = st.number_input("ST Depression", 0.0, 6.0, 1.0)
-slope = st.selectbox("Slope of ST Segment (0–2)", [0, 1, 2])
-ca = st.selectbox("Number of Major Vessels (0–3)", [0, 1, 2, 3])
-thal = st.selectbox("Thallium (1,2,3)", [1, 2, 3])
-
-# -----------------------------
-# Prediction
-# -----------------------------
-if st.button("Predict Heart Disease"):
-    user_df = pd.DataFrame(
-        [[age, sex, cp, trestbps, chol, fbs, restecg,
-          thalach, exang, oldpeak, slope, ca, thal]],
-        columns=X.columns
-    )
-
-    user_scaled = scaler.transform(user_df)
-    prediction = model.predict(user_scaled)[0]
-    probability = model.predict_proba(user_scaled)[0][1]
-
-    if prediction == "Presence":
-        st.error("🔥 High chance of Heart Disease")
+    if prediction[0] == 1:
+        st.error("⚠️ High risk of heart disease!")
     else:
-        st.success("✔ Low chance of Heart Disease")
-
-    st.info(f"Probability of Heart Disease: {probability:.2f}")
-
+        st.success("💚 Low risk of heart disease")
+else:
+    st.info("Please upload the heart.csv file to continue.")
