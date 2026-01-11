@@ -6,7 +6,7 @@ import os
 # ---------------------------
 # Load the single model safely
 # ---------------------------
-MODEL_PATH = "disease_model.pkl"  # Place your .pkl here (same folder as app.py)
+MODEL_PATH = "all_disease_models (2).pkl"  # Place your .pkl here (same folder as app.py)
 
 if os.path.exists(MODEL_PATH):
     with open(MODEL_PATH, "rb") as f:
